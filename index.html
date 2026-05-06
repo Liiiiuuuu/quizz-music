@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz Musical</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0d0d0f;
+    --surface: #18181c;
+    --surface2: #222228;
+    --border: rgba(255,255,255,0.08);
+    --text: #f0f0f2;
+    --muted: #888892;
+    --accent: #c8f04a;
+    --accent2: #7c6fff;
+    --danger: #ff5c5c;
+    --success: #4affa0;
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 15px;
+  }
+
+  h1, h2, h3, .display { font-family: 'Syne', sans-serif; }
+
+  /* TABS */
+  .app-header {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 1.5rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .app-header::-webkit-scrollbar { display: none; }
+
+  .app-logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 18px;
+    color: var(--accent);
+    margin-right: 2rem;
+    white-space: nowrap;
+    letter-spacing: -0.5px;
+  }
+
+  .tab {
+    padding: 1rem 1.25rem;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: color 0.15s, border-color 0.15s;
+    user-select: none;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* PANELS */
+  .panel { display: none; padding: 1.5rem; max-width: 640px; margin: 0 auto; }
+  .panel.active { display: block; }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1rem;
+  }
+
+  /* INPUTS */
+  input[type=text], textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input[type=text]:focus, textarea:focus { border-color: var(--accent2); }
+  label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 5px; }
+
+  /* BUTTONS */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 18px;
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    transition: opacity 0.12s, transform 0.1s;
+    text-align: center;
+    justify-content: center;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn-full { width: 100%; }
+  .btn-accent { background: var(--accent); color: #0d0d0f; border-color: var(--accent); font-weight: 700; }
+  .btn-accent2 { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+  .btn-danger { background: rgba(255,92,92,0.12); color: var(--danger); border-color: rgba(255,92,92,0.3); }
+  .btn-success { background: rgba(74,255,160,0.1); color: var(--success); border-color: rgba(74,255,160,0.3); }
+
+  /* BADGES */
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .badge-wait { background: rgba(255,255,255,0.06); color: var(--muted); }
+  .badge-live { background: rgba(74,255,160,0.12); color: var(--success); }
+  .badge-done { background: rgba(124,111,255,0.15); color: var(--accent2); }
+
+  /* SEP */
+  .sep { height: 1px; background: var(--border); margin: 1rem 0; }
+
+  /* GRID */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* QR CONTAINER */
+  .qr-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 1.5rem 1rem;
+  }
+  #qr-box, #qr-box-host {
+    background: #fff;
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    display: inline-block;
+  }
+  .qr-url {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    word-break: break-all;
+    max-width: 280px;
+  }
+
+  /* QUESTION CARD IN SETUP */
+  .q-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    margin-bottom: 8px;
+  }
+  .q-card-num { font-size: 11px; color: var(--muted); margin-bottom: 8px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+
+  /* ANSWER ITEMS */
+  .answer-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+  }
+  .answer-item.winner {
+    background: rgba(200,240,74,0.07);
+    border-color: rgba(200,240,74,0.3);
+  }
+  .answer-rank { font-size: 18px; min-width: 30px; font-family: 'Syne', sans-serif; font-weight: 700; }
+  .answer-name { font-weight: 500; font-size: 14px; }
+  .answer-text { font-size: 13px; color: var(--muted); }
+  .answer-time { margin-left: auto; font-size: 12px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+  /* REVEAL BOX */
+  .reveal-box {
+    background: rgba(200,240,74,0.07);
+    border: 1px solid rgba(200,240,74,0.3);
+    border-radius: var(--radius-sm);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .reveal-label { font-size: 11px; color: rgba(200,240,74,0.7); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; margin-bottom: 6px; }
+  .reveal-answer { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700; color: var(--accent); }
+
+  /* PLAYER CHIPS */
+  .player-list { display: flex; flex-wrap: wrap; gap: 8px; }
+  .player-chip {
+    padding: 5px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 13px;
+  }
+
+  /* SCORES */
+  .score-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+  }
+  .score-item.first { background: rgba(200,240,74,0.07); border-color: rgba(200,240,74,0.3); }
+  .score-medal { font-size: 22px; min-width: 34px; }
+  .score-name { font-family: 'Syne', sans-serif; font-weight: 600; flex: 1; }
+  .score-pts { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 18px; color: var(--accent); }
+
+  /* PLAYER WAITING ANIM */
+  .pulse-icon {
+    font-size: 48px;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.1);opacity:0.7} }
+
+  /* STATUS BAR */
+  .status-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap; }
+
+  /* FINISH */
+  .finish-center { text-align: center; padding: 2.5rem 1rem; }
+  .finish-icon { font-size: 56px; display: block; margin-bottom: 1rem; }
+  .finish-title { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; margin-bottom: 0.5rem; }
+
+  /* MOBILE PLAYER VIEW */
+  @media (max-width: 480px) {
+    .panel { padding: 1rem; }
+    .app-logo { font-size: 15px; margin-right: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div class="app-logo">♪ QuizMusic</div>
+  <div class="tab active" onclick="switchTab('setup')">⚙ Config</div>
+  <div class="tab" onclick="switchTab('host')">▶ Animateur</div>
+  <div class="tab" onclick="switchTab('scores')">🏆 Scores</div>
+  <div class="tab" onclick="switchTab('player')">📱 Joueur</div>
+</div>
+
+<!-- ===== SETUP ===== -->
+<div id="tab-setup" class="panel active">
+  <div class="card">
+    <div class="card-title">Nom du quiz</div>
+    <input type="text" id="quiz-name" value="Quiz Musical" style="margin-bottom:0">
+  </div>
+
+  <div class="card">
+    <div class="card-title">Musiques</div>
+    <div id="questions-list"></div>
+    <button class="btn btn-full" onclick="addQuestion()" style="margin-top:4px">+ Ajouter une musique</button>
+  </div>
+
+  <button class="btn btn-accent btn-full" onclick="startQuiz()" style="font-size:16px;padding:14px">
+    ▶ Lancer le quiz
+  </button>
+
+  <div class="card" style="margin-top:1rem">
+    <div class="card-title">QR Code joueurs</div>
+    <div class="qr-wrap">
+      <div id="qr-box"></div>
+      <div class="qr-url" id="qr-url-text">Lancez le quiz pour générer le QR code</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== HOST ===== -->
+<div id="tab-host" class="panel">
+
+  <div id="host-waiting" style="display:none">
+    <div class="card">
+      <div class="card-title">Salle d'attente</div>
+      <div class="status-bar">
+        <span class="badge badge-wait">En attente</span>
+        <span id="player-count-badge" style="font-size:13px;color:var(--muted)">0 joueur(s)</span>
+      </div>
+      <div class="qr-wrap" style="padding:0.75rem 0">
+        <div id="qr-box-host"></div>
+        <div class="qr-url" id="qr-url-host">Scannez pour rejoindre</div>
+      </div>
+      <div class="sep"></div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em;font-weight:600">Joueurs connectés</div>
+      <div class="player-list" id="player-list-host"></div>
+      <div class="sep"></div>
+      <button class="btn btn-accent btn-full" onclick="nextQuestion()">Commencer →</button>
+    </div>
+  </div>
+
+  <div id="host-question" style="display:none">
+    <div class="card">
+      <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:6px" id="host-q-num">Question 1 / 5</div>
+      <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:1rem" id="host-q-title">—</div>
+      <div class="status-bar">
+        <span class="badge badge-live" id="host-status-badge">● En cours</span>
+        <span id="host-answer-count" style="font-size:13px;color:var(--muted)">0 réponse(s)</span>
+      </div>
+      <div id="live-answers"></div>
+      <div class="sep"></div>
+      <div class="grid2">
+        <button class="btn btn-success" onclick="revealAnswer()">👁 Révéler</button>
+        <button class="btn btn-accent2" onclick="nextQuestion()" id="btn-next" disabled>Suivante →</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="host-reveal" style="display:none">
+    <div class="card">
+      <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:6px" id="reveal-q-num"></div>
+      <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:1rem" id="reveal-q-title"></div>
+      <div class="reveal-box">
+        <div class="reveal-label">Bonne réponse</div>
+        <div class="reveal-answer" id="reveal-correct-answer"></div>
+      </div>
+      <div id="reveal-answers-list"></div>
+      <div class="sep"></div>
+      <button class="btn btn-accent btn-full" onclick="nextQuestion()" id="btn-next-reveal">Question suivante →</button>
+    </div>
+  </div>
+
+  <div id="host-finished" style="display:none">
+    <div class="card finish-center">
+      <span class="finish-icon">🏆</span>
+      <div class="finish-title">Quiz terminé !</div>
+      <div style="color:var(--muted);margin-bottom:1.5rem">Voici le classement final.</div>
+      <button class="btn btn-accent" onclick="switchTab('scores')">Voir le classement</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== SCORES ===== -->
+<div id="tab-scores" class="panel">
+  <div class="card">
+    <div class="card-title">🏆 Classement général</div>
+    <div id="scores-list"><div style="color:var(--muted);font-size:13px">Le quiz n'a pas encore commencé.</div></div>
+  </div>
+</div>
+
+<!-- ===== PLAYER ===== -->
+<div id="tab-player" class="panel">
+
+  <div id="player-join" class="card">
+    <div class="card-title">Rejoindre le quiz</div>
+    <label>Ton prénom</label>
+    <input type="text" id="player-name-input" placeholder="Ex : Marie" style="margin-bottom:14px" autocomplete="off">
+    <button class="btn btn-accent btn-full" onclick="joinGame()">Rejoindre →</button>
+  </div>
+
+  <div id="player-waiting" class="card" style="display:none;text-align:center;padding:2.5rem 1rem">
+    <div class="pulse-icon">🎵</div>
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:18px;margin:1rem 0 0.5rem" id="player-welcome">Bienvenue !</div>
+    <div style="color:var(--muted);font-size:13px">En attente de la prochaine question...</div>
+    <div style="margin-top:1.25rem"><span class="badge badge-wait">En attente</span></div>
+  </div>
+
+  <div id="player-question" class="card" style="display:none">
+    <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:6px" id="player-q-num">Question 1</div>
+    <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:4px" id="player-q-hint"></div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:1rem">⚡ Réponds le plus vite possible !</div>
+    <label>Ta réponse</label>
+    <input type="text" id="player-answer-input" placeholder="Écris ta réponse..." style="margin-bottom:14px;font-size:16px" autocomplete="off" onkeydown="if(event.key==='Enter')submitAnswer()">
+    <button class="btn btn-success btn-full" style="font-size:16px;padding:14px" onclick="submitAnswer()">Envoyer ⚡</button>
+  </div>
+
+  <div id="player-answered" class="card" style="display:none;text-align:center;padding:2.5rem 1rem">
+    <div style="font-size:48px;margin-bottom:1rem">✅</div>
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:18px;margin-bottom:0.5rem">Réponse envoyée !</div>
+    <div style="color:var(--muted);font-size:13px;margin-bottom:1rem" id="player-answer-sent"></div>
+    <span class="badge badge-live">En attente du résultat...</span>
+  </div>
+
+  <div id="player-reveal" class="card" style="display:none;text-align:center;padding:1.5rem">
+    <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:1rem" id="player-q-title-reveal"></div>
+    <div class="reveal-box" style="text-align:left">
+      <div class="reveal-label">Bonne réponse</div>
+      <div class="reveal-answer" id="player-correct-answer"></div>
+    </div>
+    <div id="player-result-msg" style="font-size:14px;margin:0.75rem 0"></div>
+    <div style="color:var(--muted);font-size:12px">En attente de la prochaine question...</div>
+  </div>
+
+</div>
+
+<script>
+// ── ÉTAT GLOBAL ──────────────────────────────────────────────
+const STATE = {
+  quiz: { name: "Quiz Musical", questions: [] },
+  status: "setup",     // setup | waiting | question | reveal | finished
+  currentQ: -1,
+  players: {},         // id -> name
+  answers: [],         // {name, text, time, rank}
+  scores: {},          // name -> points
+  quizStarted: false,
+  questionStart: 0
+};
+
+let _playerId = null;
+let _playerName = null;
+
+// ── SETUP ────────────────────────────────────────────────────
+function genId() { return Math.random().toString(36).substr(2, 9); }
+
+function addQuestion(title="", answer="") {
+  STATE.quiz.questions.push({ id: genId(), title, answer });
+  renderQuestions();
+}
+
+function renderQuestions() {
+  const el = document.getElementById("questions-list");
+  if (!STATE.quiz.questions.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;margin-bottom:8px">Aucune musique — cliquez sur + pour en ajouter.</div>';
+    return;
+  }
+  el.innerHTML = STATE.quiz.questions.map((q, i) => `
+    <div class="q-card">
+      <div class="q-card-num">Musique ${i+1}</div>
+      <div class="grid2" style="gap:8px;margin-bottom:8px">
+        <div>
+          <label>Indice (optionnel)</label>
+          <input type="text" value="${q.title.replace(/"/g,'&quot;')}" placeholder="Ex : Artiste des années 80" oninput="STATE.quiz.questions[${i}].title=this.value">
+        </div>
+        <div>
+          <label>Bonne réponse ✱</label>
+          <input type="text" value="${q.answer.replace(/"/g,'&quot;')}" placeholder="Ex : Mylène Farmer" oninput="STATE.quiz.questions[${i}].answer=this.value">
+        </div>
+      </div>
+      <button class="btn btn-danger" style="font-size:12px;padding:5px 12px" onclick="removeQuestion(${i})">✕ Supprimer</button>
+    </div>
+  `).join("");
+}
+
+function removeQuestion(i) {
+  STATE.quiz.questions.splice(i, 1);
+  renderQuestions();
+}
+
+// ── QR CODE ──────────────────────────────────────────────────
+function makeQR(containerId, url) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = "";
+  new QRCode(el, {
+    text: url,
+    width: 180,
+    height: 180,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.M
+  });
+}
+
+function getPlayerURL() {
+  const base = window.location.href.split("#")[0];
+  return base + "#player";
+}
+
+function generateQRCodes() {
+  const url = getPlayerURL();
+  makeQR("qr-box", url);
+  makeQR("qr-box-host", url);
+  document.getElementById("qr-url-text").textContent = url;
+  document.getElementById("qr-url-host").textContent = url;
+}
+
+// ── TABS ─────────────────────────────────────────────────────
+function switchTab(id) {
+  const order = ["setup","host","scores","player"];
+  document.querySelectorAll(".tab").forEach((t, i) => t.classList.toggle("active", order[i] === id));
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  document.getElementById("tab-"+id).classList.add("active");
+}
+
+// ── START QUIZ ───────────────────────────────────────────────
+function startQuiz() {
+  if (!STATE.quiz.questions.length) { alert("Ajoutez au moins une musique !"); return; }
+  const unanswered = STATE.quiz.questions.find(q => !q.answer.trim());
+  if (unanswered) { alert("Renseignez la bonne réponse pour chaque musique !"); return; }
+  STATE.quizStarted = true;
+  STATE.status = "waiting";
+  STATE.currentQ = -1;
+  STATE.answers = [];
+  STATE.scores = {};
+  STATE.players = {};
+  generateQRCodes();
+  switchTab("host");
+  showHostPanel("host-waiting");
+  renderScores();
+}
+
+// ── HOST PANELS ──────────────────────────────────────────────
+function showHostPanel(id) {
+  ["host-waiting","host-question","host-reveal","host-finished"].forEach(p => {
+    document.getElementById(p).style.display = "none";
+  });
+  document.getElementById(id).style.display = "block";
+}
+
+function updatePlayerCountBadge() {
+  const count = Object.keys(STATE.players).length;
+  const el = document.getElementById("player-count-badge");
+  if (el) el.textContent = count + " joueur(s) connecté(s)";
+  renderPlayerList();
+}
+
+function renderPlayerList() {
+  const el = document.getElementById("player-list-host");
+  if (!el) return;
+  const names = Object.values(STATE.players);
+  el.innerHTML = names.length
+    ? names.map(n => `<span class="player-chip">${n}</span>`).join("")
+    : '<span style="font-size:13px;color:var(--muted)">Personne encore…</span>';
+}
+
+// ── NEXT QUESTION ────────────────────────────────────────────
+function nextQuestion() {
+  STATE.currentQ++;
+  if (STATE.currentQ >= STATE.quiz.questions.length) {
+    STATE.status = "finished";
+    showHostPanel("host-finished");
+    renderScores();
+    if (_playerId) showPlayerPanel("player-waiting"); // fallback
+    return;
+  }
+  STATE.answers = [];
+  STATE.status = "question";
+  STATE.questionStart = Date.now();
+  const q = STATE.quiz.questions[STATE.currentQ];
+  const total = STATE.quiz.questions.length;
+
+  document.getElementById("host-q-num").textContent = `Question ${STATE.currentQ+1} / ${total}`;
+  document.getElementById("host-q-title").textContent = q.title || "Quelle est cette musique ?";
+  document.getElementById("host-answer-count").textContent = "0 réponse(s)";
+  document.getElementById("live-answers").innerHTML = "";
+  document.getElementById("btn-next").disabled = true;
+  showHostPanel("host-question");
+
+  // Mise à jour vue joueur si présent sur la même page
+  if (_playerId && STATE.players[_playerId]) {
+    showPlayerPanel("player-question");
+    setupPlayerQuestion();
+  }
+}
+
+// ── SUBMIT ANSWER (joueur) ───────────────────────────────────
+function joinGame() {
+  const name = document.getElementById("player-name-input").value.trim();
+  if (!name) { alert("Entre ton prénom !"); return; }
+  if (!STATE.quizStarted) { alert("L'animateur n'a pas encore lancé le quiz. Attends qu'il appuie sur Lancer !"); return; }
+  _playerId = genId();
+  _playerName = name;
+  STATE.players[_playerId] = name;
+  if (STATE.scores[name] === undefined) STATE.scores[name] = 0;
+  updatePlayerCountBadge();
+
+  document.getElementById("player-join").style.display = "none";
+  if (STATE.status === "waiting") {
+    showPlayerPanel("player-waiting");
+    document.getElementById("player-welcome").textContent = "Bienvenue " + name + " !";
+  } else if (STATE.status === "question") {
+    showPlayerPanel("player-question");
+    setupPlayerQuestion();
+  }
+}
+
+function showPlayerPanel(id) {
+  ["player-join","player-waiting","player-question","player-answered","player-reveal"].forEach(p => {
+    document.getElementById(p).style.display = "none";
+  });
+  document.getElementById(id).style.display = "block";
+}
+
+function setupPlayerQuestion() {
+  const q = STATE.quiz.questions[STATE.currentQ];
+  document.getElementById("player-q-num").textContent = "Question " + (STATE.currentQ+1);
+  document.getElementById("player-q-hint").textContent = q.title ? "Indice : " + q.title : "Écoutez bien…";
+  document.getElementById("player-answer-input").value = "";
+  setTimeout(() => document.getElementById("player-answer-input").focus(), 100);
+}
+
+function submitAnswer() {
+  if (!_playerName) return;
+  if (STATE.answers.find(a => a.name === _playerName)) { alert("Tu as déjà répondu !"); return; }
+  const text = document.getElementById("player-answer-input").value.trim();
+  if (!text) { alert("Écris une réponse d'abord !"); return; }
+  const elapsed = Date.now() - STATE.questionStart;
+  STATE.answers.push({ name: _playerName, text, time: elapsed });
+  document.getElementById("player-answer-sent").textContent = '"' + text + '"';
+  showPlayerPanel("player-answered");
+  updateLiveAnswers();
+}
+
+function updateLiveAnswers() {
+  const count = STATE.answers.length;
+  const el = document.getElementById("host-answer-count");
+  if (el) el.textContent = count + " réponse(s)";
+  const liveEl = document.getElementById("live-answers");
+  if (!liveEl) return;
+  liveEl.innerHTML = STATE.answers.map((a, i) => `
+    <div class="answer-item">
+      <span class="answer-rank">${i+1}.</span>
+      <div>
+        <div class="answer-name">${a.name}</div>
+        <div class="answer-text">${a.text}</div>
+      </div>
+      <span class="answer-time">${(a.time/1000).toFixed(1)}s</span>
+    </div>
+  `).join("");
+  if (count > 0) document.getElementById("btn-next").disabled = false;
+}
+
+// ── REVEAL ───────────────────────────────────────────────────
+function revealAnswer() {
+  const q = STATE.quiz.questions[STATE.currentQ];
+  const total = STATE.quiz.questions.length;
+  const sorted = [...STATE.answers].sort((a,b) => a.time - b.time);
+  const medals = ["🥇","🥈","🥉"];
+
+  if (sorted.length > 0) {
+    const winner = sorted[0].name;
+    if (STATE.scores[winner] === undefined) STATE.scores[winner] = 0;
+    STATE.scores[winner]++;
+  }
+
+  document.getElementById("reveal-q-num").textContent = `Question ${STATE.currentQ+1} / ${total}`;
+  document.getElementById("reveal-q-title").textContent = q.title || "Résultat";
+  document.getElementById("reveal-correct-answer").textContent = q.answer;
+
+  document.getElementById("reveal-answers-list").innerHTML = sorted.length
+    ? sorted.map((a, i) => `
+        <div class="answer-item ${i===0?'winner':''}">
+          <span class="answer-rank">${medals[i] || (i+1)+'.'}</span>
+          <div style="flex:1">
+            <div class="answer-name">${a.name}</div>
+            <div class="answer-text">${a.text}</div>
+          </div>
+          <span class="answer-time">${(a.time/1000).toFixed(1)}s</span>
+        </div>`).join("")
+    : '<div style="color:var(--muted);font-size:13px">Aucune réponse reçue.</div>';
+
+  const isLast = STATE.currentQ >= total - 1;
+  document.getElementById("btn-next-reveal").textContent = isLast ? "Voir le classement final" : "Question suivante →";
+  showHostPanel("host-reveal");
+
+  // Vue joueur
+  if (_playerId && STATE.players[_playerId]) {
+    document.getElementById("player-q-title-reveal").textContent = q.title || "Résultat";
+    document.getElementById("player-correct-answer").textContent = q.answer;
+    const myAnswer = STATE.answers.find(a => a.name === _playerName);
+    const myRank = sorted.findIndex(a => a.name === _playerName);
+    let msg = "";
+    if (!myAnswer) {
+      msg = '<span style="color:var(--muted)">Tu n\'as pas répondu.</span>';
+    } else if (myRank === 0) {
+      msg = '<span style="color:var(--accent);font-weight:600">🏆 Tu étais le plus rapide !</span>';
+    } else {
+      msg = `Position ${myRank+1} — répondu en <strong>${(myAnswer.time/1000).toFixed(1)}s</strong>`;
+    }
+    document.getElementById("player-result-msg").innerHTML = msg;
+    showPlayerPanel("player-reveal");
+  }
+
+  renderScores();
+}
+
+// ── SCORES ───────────────────────────────────────────────────
+function renderScores() {
+  const el = document.getElementById("scores-list");
+  const entries = Object.entries(STATE.scores).sort((a,b) => b[1]-a[1]);
+  const medals = ["🥇","🥈","🥉"];
+  if (!entries.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px">Aucun score encore.</div>';
+    return;
+  }
+  el.innerHTML = entries.map(([name, pts], i) => `
+    <div class="score-item ${i===0?'first':''}">
+      <span class="score-medal">${medals[i]||i+1+'.'}</span>
+      <span class="score-name">${name}</span>
+      <span class="score-pts">${pts} pt${pts>1?'s':''}</span>
+    </div>
+  `).join("");
+}
+
+// ── INIT ─────────────────────────────────────────────────────
+// Exemples par défaut
+addQuestion("Artiste français des années 90", "");
+addQuestion("Groupe de rock britannique des années 60", "");
+renderQuestions();
+
+// Si l'URL contient #player, aller direct sur la vue joueur
+if (window.location.hash === "#player") {
+  switchTab("player");
+}
+</script>
+</body>
+</html>
